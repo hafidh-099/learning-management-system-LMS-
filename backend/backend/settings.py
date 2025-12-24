@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'student',
     'teacher',
     'api',
-    'userauth'
+    'userauth',
     # Third Party Apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',

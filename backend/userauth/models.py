@@ -8,7 +8,7 @@ class CustomUser(AbstractUser):
     username = models.CharField(unique=True,max_length=100)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=100)
-    otp = models.CharField(unique=True,max_length=100)#bcs it can combination of Int and char
+    otp = models.CharField(max_length=100,blank=True,null=True)#bcs it can combination of Int and char
     
     USERNAME_FIELD = 'email' #which field will be used for login as username
     REQUIRED_FIELDS = ['username'] # this is field which we need to
@@ -51,8 +51,8 @@ def create_user_profile(sender,instance,created,**kwargs):
     #if user created by default it create profile by instance of that user created
         return Profile.objects.create(user=instance)
 
-def save_user(sender,instance,created,**kwargs):
-    return instance.profile.save()
+# def save_user(sender,instance,created,**kwargs):
+#     return instance.profile.save()
 
 post_save.connect(create_user_profile,sender=CustomUser)
-post_save.connect(save_user,sender=CustomUser)
+# post_save.connect(save_user,sender=CustomUser)
