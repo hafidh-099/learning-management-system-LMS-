@@ -9,6 +9,8 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=100)
     otp = models.CharField(max_length=100,blank=True,null=True)#bcs it can combination of Int and char
+    refresh_token = models.CharField(max_length=255,blank=True,null=True)
+    
     
     USERNAME_FIELD = 'email' #which field will be used for login as username
     REQUIRED_FIELDS = ['username'] # this is field which we need to

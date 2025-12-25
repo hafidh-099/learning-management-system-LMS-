@@ -16,7 +16,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        models = CustomUser
+        model = CustomUser
         fields = "__all__"
 
 class ProfileSerializer(serializers.ModelSerializer):
