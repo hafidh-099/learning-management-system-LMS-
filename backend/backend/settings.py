@@ -141,10 +141,10 @@ AUTH_USER_MODEL = 'userauth.CustomUser' #where user stored
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MAILGUN_SECRET_KEY = os.getenv('MAILGUN_SECRET_KEY')
-MAILGUN_SENDER_DOMAIN = os.getenv('MAILGUN_SENDER_DOMAIN')
+# MAILGUN_SECRET_KEY = os.getenv('MAILGUN_SECRET_KEY')
+# MAILGUN_SENDER_DOMAIN = os.getenv('MAILGUN_SENDER_DOMAIN')
 
-##email
+##email gmail smtp
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 EMAIL_HOST = 'smtp.gmail.com'
