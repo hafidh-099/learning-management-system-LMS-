@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.mail import send_mail
 from django.conf import settings
+from api import models as api_model
+
 
 
 # Create your views here.
@@ -86,4 +88,47 @@ class PasswordChangeViews(generics.CreateAPIView):
         else:
             return Response({"message":"user dont exists"},status=status.HTTP_404_NOT_FOUND)
         
-        
+class CategoryListView(generics.ListAPIView):
+    #queryset = api_model.Category.objects.all()#note you can pass any query here
+    #Example if you want to filter by someone who is active
+    queryset = api_model.Category.objects.filter(active=True)
+    serializer_class = api_serializer.CategorySerializer
+    permission_classes = [AllowAny]
+    
+class CourseListView(generics.ListAPIView):
+    queryset = api_model.Course.objects.filter(platform_stauts = "Published",teacher_course_status = "Published")
+    serializer_class = api_serializer.CourseSerializer 
+    permission_classes = [AllowAny]
+    
+class CourseDetailViews(generics.RetrieveAPIView):
+    #retrive is fetch only one field 
+    serializer_class = api_serializer.CourseSerializer
+    permission_classes = [AllowAny]
+    #we want to retrive course by slug name instead of id so we must overide default get
+    # localhost:8000/course/1/ but instead be localhost:8000/course/react-native/
+    def get_object(self):
+        #grub slug from url passed(we use kwargs to catch something passed on url)
+        slug = self.kwargs['slug']
+        course = api_model.Course.objects.get(slug=slug,platform_stauts = "Published",teacher_course_status = "Published")
+        return course
+    
+class CartListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = api_serializer.CartSerializer
+    
+    def get_queryset(self):
+        #get cart by userid 
+        cart_id = self.kwargs['cart_id']
+        queryset = api_model.Cart.objects.filter(cart_id=cart_id)
+        return queryset
+
+class CartItemDeletedView(generics.DestroyAPIView):
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+    
+    def get_object(self):
+        cart_id = self.kwargs['cart_id']
+        item_id = self.kwargs['id']
+        return api_model.Cart.objects.filter(cart_id=cart_id,id=item_id).first()
+    
+    

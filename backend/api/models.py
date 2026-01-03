@@ -3,10 +3,12 @@ from userauth.models import CustomUser,Profile
 from django.utils.text import slugify
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-from moviepy.editor import videoFileClip
+# from moviepy.editor import videoFileClip
+# from moviepy.editors import videoFileClip
+from moviepy.video import VideoClip
 import math
  
-
+ 
 # Create your models here.
 LANGUAGE = (
     ("English","English"),#key and value
@@ -84,6 +86,7 @@ class Category(models.Model):
     title = models.CharField(max_length=100)
     image = models.FileField(upload_to='course-file',blank=True,null=True,default='default.jpg')
     slug = models.SlugField(unique=True,null=True,blank=True)
+    active = models.BooleanField(default=False)
     
     #what to appear in my admin backend
     class Meta:
@@ -112,7 +115,7 @@ class Course(models.Model):
     description = models.TextField(null=True,blank=True)
     price = models.DecimalField(max_digits=12,decimal_places=2,default=0.00)
     language = models.CharField(choices=LANGUAGE,default="English",max_length=100)
-    level = models.CharField(choices=LANGUAGE,default="Begginer")
+    level = models.CharField(choices=LEVEL,default="Begginer",max_length=100)
     platform_stauts = models.CharField(choices=PLATFORM_STATUS,default="Published",max_length=100)
     teacher_course_status = models.CharField(choices=TEACHER_STATUS,default="Published",max_length=100)
     featured = models.BooleanField(default=False)
@@ -126,11 +129,11 @@ class Course(models.Model):
     def save(self,*args, **kwargs):
         if self.slug == "" or self.slug==None:
             self.slug = slugify(self.title)#eg course title is  learn python so it will be learn-python
-        super(Category,self).save(*args, **kwargs)
+        super(Course,self).save(*args, **kwargs)
     #to know student who enroll to course
     
-    def student_count(self):
-        return EnrollCourse.objects.filter(course=self)
+    def student(self):
+        return EnrolledCourse.objects.filter(course=self)
     
     def curriculum(self):
         return VariantItem.objects.filter(variant__course=self)# two underscore (__) it mean any field on given table
@@ -146,8 +149,7 @@ class Course(models.Model):
     
     def reviews(self):
         return Review.objects.filter(course=self,active=True)
-    
-
+   
 #(section)like a all lecture will be in section
 class Variant(models.Model):
     course = models.ForeignKey(Course,on_delete=models.CASCADE)
@@ -159,10 +161,10 @@ class Variant(models.Model):
         return self.title
     
     def variant_items(self):
-        return VariantItem.objects.filter(Variant=self)
+        return VariantItem.objects.filter(variant=self)
     
 class VariantItem(models.Model):
-    variant = models.ForeignKey(Course,on_delete=models.CASCADE,related_name='variant_items')
+    variant = models.ForeignKey(Variant,on_delete=models.CASCADE,related_name='variant_items')
     title = models.CharField(max_length=100)
     decription = models.TextField(null=True,blank=True)
     variant_items_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
@@ -179,7 +181,7 @@ class VariantItem(models.Model):
         super().save(*args, **kwargs)
         
         if self.file:
-            clip = videoFileClip(self.file.path)#give actual path(we want to extract time of video)
+            clip = VideoClip(self.file.path)#give actual path(we want to extract time of video)
             duration_second = clip.duration
             #convert duration into min and second
             
@@ -194,7 +196,7 @@ class VariantItem(models.Model):
             
 class Question_Answer(models.Model):
     course =  models.ForeignKey(Course,on_delete=models.CASCADE)
-    user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL)
+    user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True)
     title = models.CharField(max_length=100,null=True,blank=True)
     qa_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
     date = models.DateTimeField(default=timezone.now)
@@ -241,11 +243,10 @@ class Cart(models.Model):
     tax_fee =models.DecimalField(max_digits=12,default=0.00,decimal_places=2)
     total = models.DecimalField(max_digits=12,default=0.00,decimal_places=2)
     country = models.CharField(max_length=100,null=True,blank=True)
-    cart_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
+    cart_id = ShortUUIDField(length=6,max_length=20,alphabet="abcdef123456789")
     
     def __str__(self):
         return self.course.title
-    
 class CartOrder(models.Model):
     student = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     teacher = models.ManyToManyField(Teacher,blank=True)
@@ -260,7 +261,7 @@ class CartOrder(models.Model):
     coupons = models.ManyToManyField('api.Coupon',blank=True)
     #note:null=True dont work on ManyToMany
     stripe_session_id = models.CharField(max_length=1000,null=True,blank=True)
-    oid = cart_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
+    oid = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
     date = models.DateTimeField(default=timezone.now)
     saved = models.DecimalField(max_digits=12,default=0.00,decimal_places=2)
     
@@ -274,9 +275,9 @@ class CartOrder(models.Model):
         return self.oid
     
 class CartOrderItem(models.Model):
-    teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE)
-    order = models.ForeignKey(CartOrder,on_delete=models.CASCADE,related_name="orderitem")
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="orderitem")
+    order = models.ForeignKey(CartOrder,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     coupons = models.ForeignKey('api.Coupon',on_delete=models.SET_NULL,null=True,blank=True)
     tax_fee = models.DecimalField(max_digits=12,default=0.00,decimal_places=2)
     total = models.DecimalField(max_digits=12,default=0.00,decimal_places=2)
@@ -299,7 +300,7 @@ class CartOrderItem(models.Model):
         return self.oid
     
 class Cirtificate(models.Model):
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     cirtificate_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
     date = models.DateTimeField(default=timezone.now)
@@ -308,7 +309,7 @@ class Cirtificate(models.Model):
         return self.course.title
 
 class CompletedLesson(models.Model):
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     date = models.DateTimeField(default=timezone.now)
     variant_item = models.ForeignKey(VariantItem,on_delete=models.CASCADE)
@@ -317,7 +318,7 @@ class CompletedLesson(models.Model):
         return self.course.title
 
 class EnrolledCourse(models.Model):
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     teacher = models.ForeignKey(Teacher,on_delete=models.SET_NULL,null=True,blank=True)
     enrollment_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
@@ -329,13 +330,13 @@ class EnrolledCourse(models.Model):
         return VariantItem.objects.filter(variant__course=self.course)
     
     def complete_lesson(self):
-        return CompletedLesson.objects.filter(Course=self.course,user=self.user)
+        return CompletedLesson.objects.filter(course=self.course,user=self.user)
     
     def curriculum(self):
         return Variant.objects.filter(course=self.course)
     
     def note(self):
-        return Note.objects.filter(Course=self.course,user=self.user)
+        return Note.objects.filter(course=self.course,user=self.user)
     
     def question_answer(self):
         return Question_Answer.objects.filter(course=self.course)
@@ -347,7 +348,7 @@ class EnrolledCourse(models.Model):
         return self.course.title
 
 class Note(models.Model):
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     date = models.DateTimeField(default=timezone.now)
     note_id = ShortUUIDField(unique=True,length=6,max_length=20,alphabet="abcdef123456789")
@@ -358,7 +359,7 @@ class Note(models.Model):
         return self.title
 
 class Review(models.Model):
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
     review = models.TextField()
     rating = models.IntegerField(choices=RATING,default=None)
@@ -398,7 +399,7 @@ class Coupon(models.Model):
     
 class Whichlist(models.Model):
     user = models.ForeignKey(CustomUser,on_delete=models.SET_NULL,null=True,blank=True)
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name="order_item")
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     
     def __str__(self):
         return self.user
