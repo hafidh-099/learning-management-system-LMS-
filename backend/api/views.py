@@ -10,6 +10,7 @@ from rest_framework import status
 from django.core.mail import send_mail
 from django.conf import settings
 from api import models as api_model
+from rest_framework.response import Response
 
 
 
@@ -132,3 +133,40 @@ class CartItemDeletedView(generics.DestroyAPIView):
         return api_model.Cart.objects.filter(cart_id=cart_id,id=item_id).first()
     
     
+class CartStaticView(generics.RetrieveAPIView):
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'cart_id'
+    
+    def get_queryset(self):
+        cart_id = self.kwargs['cart_id']
+        queryset = api_model.Cart.objects.filter(cart_id=cart_id)
+        return queryset
+    
+    def get(self, request, *args, **kwargs):
+        query = self.get_queryset()#Note this return whenever value passed into get_queryset above
+        total_price = 0.00
+        total_tax = 0.00
+        total_total = 0.00
+        
+        for cart_item in query:
+            total_price += float(self.calculate_price(cart_item))
+            total_tax += float(self.calculate_tax(cart_item))
+            total_total += round(float(self.calculate_total(cart_item)),2)#i.e if total is 23.84489 it will take only 23.84
+            
+            data = {
+                "price": total_price,
+                "tax": total_tax,
+                "total": total_total
+            }
+        return Response(data)  
+    
+    def calculate_price(self,cart_item):     
+        return cart_item.price
+    
+    def calculate_tax(self,cart_item):
+        return cart_item.tax_fee
+    
+    
+    def calculate_total(self,cart_item):
+        return cart_item.total

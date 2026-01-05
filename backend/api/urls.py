@@ -15,4 +15,5 @@ urlpatterns = [
     path('course/course-detail/<slug>/',api_views.CourseDetailViews.as_view()),
     path('course/cart-list/<cart_id>/',api_views.CartListView.as_view()),  
     path('course/cart-item-delete/<cart_id>/<id>/',api_views.CartItemDeletedView.as_view()),
+    path('cart/stats/<cart_id>',api_views.CartStaticView.as_view()),
 ]
